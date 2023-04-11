@@ -34,5 +34,7 @@ public class TraceMain {
         System.out.println(path.toAbsolutePath());
         context.tracing().stop(new Tracing.StopOptions()
             .setPath(path));
+
+        // mvn exec:java -e -D exec.mainClass=com.microsoft.playwright.CLI -D exec.args="show-trace trace.zip"
     }
 }
