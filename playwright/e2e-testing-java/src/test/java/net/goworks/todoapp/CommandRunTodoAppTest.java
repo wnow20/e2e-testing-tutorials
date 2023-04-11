@@ -2,12 +2,16 @@ package net.goworks.todoapp;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +21,57 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class CommandRunTodoAppTest {
 
     static ThreadLocal<Thread> threadLocal = new ThreadLocal<>();
+
+    @Test
+    void test_pwd_command() throws IOException {
+        Process exec = new ProcessBuilder()
+            .command("pwd")
+            .start();
+
+        System.out.println("output:");
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(exec.getInputStream()))) {
+            System.out.println(in.readLine());
+        }
+    }
+
+    @Test
+    void test_cat_command() throws IOException, InterruptedException {
+        Process process = new ProcessBuilder()
+            .redirectErrorStream(true)
+            .command("cat")
+            .start();
+
+        new Thread(() -> {
+            InputStream inputStream = process.getInputStream();
+            try {
+                BufferedReader in = new BufferedReader(new InputStreamReader(inputStream));
+
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    System.out.println(inputLine);
+                }
+            } catch (IOException e) {
+                // terminate
+            }
+        }).start();
+
+        new Thread(() -> {
+            try (OutputStream outputStream = process.getOutputStream()) {
+                outputStream.write("a\n".getBytes());
+                outputStream.flush();
+                Thread.sleep(500);
+                outputStream.write("b\n".getBytes());
+                outputStream.flush();
+                Thread.sleep(500);
+                outputStream.write("c\n".getBytes());
+                outputStream.flush();
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+
+        process.waitFor();
+    }
 
     @Test
     void test_start_todo_app_by_command() throws InterruptedException, IOException {
