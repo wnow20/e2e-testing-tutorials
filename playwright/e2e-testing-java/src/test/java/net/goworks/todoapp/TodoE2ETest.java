@@ -17,7 +17,6 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -156,15 +155,13 @@ public class TodoE2ETest {
 
         Locator todosLocator = todoApp.switchCompleted()
             .locator(".todo-list li");
-        Assertions.assertEquals(todosLocator.count(), 1);
-        Assertions.assertEquals(todosLocator
-            .locator("text=" + todoItemName + 1).count(), 1);
+        assertThat(todosLocator).hasCount(1);
+        assertThat(todosLocator.locator("text=" + todoItemName + 1)).hasCount(1);
 
         todosLocator = todoApp.switchActive()
             .locator(".todo-list li");
-        Assertions.assertEquals(todosLocator.count(), 1);
-        Assertions.assertEquals(todosLocator
-            .locator("text=" + todoItemName + 3).count(), 1);
+        assertThat(todosLocator).hasCount(1);
+        assertThat(todosLocator.locator("text=" + todoItemName + 3)).hasCount(1);
     }
 
     @Test
@@ -176,8 +173,8 @@ public class TodoE2ETest {
             .createTodo(todoItemName + 2);
 
         todoApp.locator("button.clear-completed").click();
-        Assertions.assertEquals(todoApp.locator("text=" + todoItemName + 1).count(), 0);
-        Assertions.assertEquals(todoApp.locator("text=" + todoItemName + 2).count(), 1);
+        assertThat(todoApp.locator("text=" + todoItemName + 1)).hasCount(0);
+        assertThat(todoApp.locator("text=" + todoItemName + 2)).hasCount(1);
     }
 
     @Test
@@ -191,7 +188,7 @@ public class TodoE2ETest {
         todoApp.page().navigate("http://localhost:4200/#/active");
 
         assertThat(todoApp.locator(".filters a[href=\"#/active\"]")).hasClass("selected");
-        Assertions.assertEquals(todoApp.locator("text=" + todoItemName + 1).count(), 0);
-        Assertions.assertEquals(todoApp.locator("text=" + todoItemName + 2).count(), 1);
+        assertThat(todoApp.locator("text=" + todoItemName + 1)).hasCount(0);
+        assertThat(todoApp.locator("text=" + todoItemName + 2)).hasCount(1);
     }
 }
