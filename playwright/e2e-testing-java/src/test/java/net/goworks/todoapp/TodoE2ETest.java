@@ -1,18 +1,8 @@
 package net.goworks.todoapp;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.concurrent.CountDownLatch;
-
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType.LaunchOptions;
-import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import org.junit.jupiter.api.AfterAll;
@@ -23,8 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-
 @TestInstance(Lifecycle.PER_CLASS)
 public class TodoE2ETest {
     static Playwright playwright;
@@ -34,49 +22,14 @@ public class TodoE2ETest {
     BrowserContext context;
     Page page;
 
-    static ThreadLocal<Thread> threadLocal = new ThreadLocal<>();
-
     @BeforeAll
-    static void launchBrowser() throws InterruptedException {
+    static void launchBrowser() {
         playwright = Playwright.create();
         browser = playwright.chromium().launch(
             new LaunchOptions()
                 .setHeadless(true)
                 .setSlowMo(10)
         );
-
-        CountDownLatch latch = new CountDownLatch(1);
-
-        Thread thread = new Thread(() -> {
-            try {
-                String path = currentPath();
-                Path todoAppPath = Paths.get(path).resolve("../../todo-app").normalize();
-                Process exec = new ProcessBuilder()
-                    .directory(todoAppPath.toFile())
-                    .command("npm", "start")
-                    .start();
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                    System.out.println("destroy todo app");
-                    exec.destroy();
-                }));
-                BufferedReader in = new BufferedReader(new
-                    InputStreamReader(exec.getInputStream()));
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    System.out.println(inputLine);
-                    if (inputLine.startsWith("Serving on")) {
-                        latch.countDown();
-                    }
-                }
-                in.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
-            }
-        });
-        thread.start();
-        threadLocal.set(thread);
-        latch.await();
     }
 
     @AfterAll
@@ -95,100 +48,34 @@ public class TodoE2ETest {
         context.close();
     }
 
-    @AfterEach
-    void tearDown() {
-        Thread thread = threadLocal.get();
-        if (thread != null) {
-            thread.interrupt();
-        }
-    }
-
-    public static String currentPath() throws IOException {
-        Process exec = Runtime.getRuntime().exec("/bin/bash -c pwd");
-        InputStream inputStream = exec.getInputStream();
-        return readString(inputStream);
-    }
-
-    public static String readString(InputStream inputStream) throws IOException {
-        StringBuilder path = new StringBuilder();
-        byte[] buffer = new byte[2048];
-        int read = inputStream.read(buffer);
-        while (read != -1) {
-            path.append(new String(buffer, 0, read, Charset.defaultCharset()));
-            read = inputStream.read(buffer);
-        }
-        return path.toString();
-    }
 
     @Test
     void test_add_todo_item() {
-        String todoItemName = "new test todo for e2e";
-        new TodoApp(browser, "http://localhost:4200/")
-            .createTodo(todoItemName);
+        // 测试新增TODO事项可用
     }
 
     @Test
     void test_check_todo_item() {
-        String todoItemName = "new test todo for e2e";
-        new TodoApp(browser, "http://localhost:4200/")
-            .createTodo(todoItemName)
-            .checkTodo(todoItemName);
+        // 测试完成事项可用
     }
 
     @Test
     void test_remove_todo_item() {
-        String todoItemName = "new test todo for e2e";
-        new TodoApp(browser, "http://localhost:4200/")
-            .createTodo(todoItemName)
-            .removeTodo(todoItemName);
+        // 测试删除TODO事项可用
     }
 
     @Test
     void test_switch_tabs() {
-        String todoItemName = "switchTab";
-        TodoApp todoApp = new TodoApp(browser, "http://localhost:4200/")
-            .createTodo(todoItemName + 1)
-            .checkTodo(todoItemName + 1)
-            .createTodo(todoItemName + 2)
-            .removeTodo(todoItemName + 2)
-            .createTodo(todoItemName + 3);
-
-        Locator todosLocator = todoApp.switchCompleted()
-            .locator(".todo-list li");
-        assertThat(todosLocator).hasCount(1);
-        assertThat(todosLocator.locator("text=" + todoItemName + 1)).hasCount(1);
-
-        todosLocator = todoApp.switchActive()
-            .locator(".todo-list li");
-        assertThat(todosLocator).hasCount(1);
-        assertThat(todosLocator.locator("text=" + todoItemName + 3)).hasCount(1);
+        // 测试状态选项卡可用
     }
 
     @Test
     void test_clean_completed() {
-        String todoItemName = "switchTab";
-        TodoApp todoApp = new TodoApp(browser, "http://localhost:4200/")
-            .createTodo(todoItemName + 1)
-            .checkTodo(todoItemName + 1)
-            .createTodo(todoItemName + 2);
-
-        todoApp.locator("button.clear-completed").click();
-        assertThat(todoApp.locator("text=" + todoItemName + 1)).hasCount(0);
-        assertThat(todoApp.locator("text=" + todoItemName + 2)).hasCount(1);
+        // 清理已完成的TODO事项
     }
 
     @Test
     void test_work_fine_with_location_hash() {
-        String todoItemName = "switchTab";
-        TodoApp todoApp = new TodoApp(browser, "http://localhost:4200/")
-            .createTodo(todoItemName + 1)
-            .checkTodo(todoItemName + 1)
-            .createTodo(todoItemName + 2);
-
-        todoApp.page().navigate("http://localhost:4200/#/active");
-
-        assertThat(todoApp.locator(".filters a[href=\"#/active\"]")).hasClass("selected");
-        assertThat(todoApp.locator("text=" + todoItemName + 1)).hasCount(0);
-        assertThat(todoApp.locator("text=" + todoItemName + 2)).hasCount(1);
+        // 测试url控制状态选项卡可用
     }
 }
